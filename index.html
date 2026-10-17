@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fortnex</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script src="three.min.js"></script>
+  <script src="peerjs.min.js"></script>
+</head>
+<body>
+  <!-- MUZYKA LOBBY (wrzuć plik music.mp3 obok index.html) -->
+  <audio id="lobby-music" loop preload="auto">
+    <source src="music.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- LOGIN -->
+  <div id="login-screen" class="screen active">
+    <div class="login-box">
+      <div class="logo login-logo">FORTNEX</div>
+      <h2>Zaloguj się</h2>
+      <p class="login-sub">Użyj e-maila i hasła do konta</p>
+      
+      <input type="email" id="login-email" placeholder="Adres e-mail" autocomplete="email">
+      <input type="password" id="login-password" placeholder="Hasło" autocomplete="current-password">
+      
+      <button id="login-btn">ZALOGUJ</button>
+      <button id="register-btn" class="secondary-login">STWÓRZ KONTO</button>
+      
+      <p id="login-error" class="login-error"></p>
+    </div>
+  </div>
+
+  <!-- LOBBY (styl jak Fortnite) -->
+  <div id="lobby" class="screen">
+    <div class="lobby-bg fn-lobby-bg"></div>
+
+    <!-- TOP BAR -->
+    <div class="fn-topbar">
+      <div class="fn-top-left">
+        <span class="fn-lobby-label">LOBBY</span>
+        <button class="fn-icon-btn menu-btn active" data-tab="play" title="Graj">▶</button>
+        <button class="fn-icon-btn menu-btn" data-tab="pass" title="Karnet">★</button>
+        <button class="fn-icon-btn menu-btn" data-tab="locker" title="Szafka">👕</button>
+        <button class="fn-icon-btn menu-btn" data-tab="shop" title="Sklep">🛒</button>
+        <button class="fn-icon-btn menu-btn" data-tab="friends" title="Znajomi">👥</button>
+        <button class="fn-icon-btn menu-btn" data-tab="settings" title="Ustawienia">⚙</button>
+      </div>
+      <div class="fn-top-right">
+        <div class="fn-vbucks">💎 <span id="v-nex-count">0</span></div>
+        <div class="fn-party-count">👥 0</div>
+      </div>
+    </div>
+
+    <!-- LEFT: level + challenges -->
+    <div class="fn-left-panel">
+      <div class="fn-level-card">
+        <div class="fn-level-badge">LVL</div>
+        <div>
+          <div class="fn-level-num">POZIOM <span id="player-level">1</span></div>
+          <div class="fn-xp-bar"><div class="fn-xp-fill" style="width:15%"></div></div>
+        </div>
+      </div>
+      <div class="fn-challenges">
+        <div class="fn-ch-title">CODZIENNE WYZWANIA</div>
+        <div class="fn-ch-item">
+          <span>Eliminacje z karabinu</span>
+          <span class="fn-ch-progress">0 / 3</span>
+        </div>
+        <div class="fn-ch-item">
+          <span>Zajmij top 12 w Squad</span>
+          <span class="fn-ch-progress">0 / 1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: character + pads -->
+    <div class="fn-stage">
+      <div class="fn-character-wrap">
+        <div class="fn-player-name" id="player-name-display">Gracz</div>
+        <div class="fn-ready-status" id="fn-ready-status">Niegotowy</div>
+        <button type="button" id="btn-ready-toggle" class="fn-ready-btn">GOTOWY</button>
+        <div class="fn-skin-name" id="lobby-skin-name">Bambika</div>
+        <div class="lobby-3d-wrap">
+          <div class="fn-character" id="lobby-css-char" data-skin="bambika">
+            <div class="char-hair"></div>
+            <div class="char-head"></div>
+            <div class="char-body">
+              <div class="char-arm left"></div>
+              <div class="char-torso"></div>
+              <div class="char-arm right"></div>
+            </div>
+            <div class="char-legs">
+              <div class="char-leg left"></div>
+              <div class="char-leg right"></div>
+            </div>
+          </div>
+          <canvas id="lobby-canvas"></canvas>
+          <div class="fn-pad active-pad"></div>
+        </div>
+        <button type="button" id="lobby-emote-btn" class="fn-emote-btn">💃 EMOTKA</button>
+        <p class="fn-emote-hint">Startowa: Fortnex Groove • klawisz B</p>
+      </div>
+      <div class="fn-party-pads">
+        <div class="fn-pad empty-pad"></div>
+        <div class="fn-pad empty-pad"></div>
+        <div class="fn-pad empty-pad"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: mode + play -->
+    <div class="fn-right-panel">
+      <button class="fn-friend-link">LINK ZNAJOMEGO</button>
+      <div class="fn-mode-box">
+        <div class="fn-mode-name">SQUADS</div>
+        <div class="fn-mode-sub">NIE UZUPEŁNIAJ</div>
+        <div class="mode-select fn-mode-select">
+          <div class="mode-card selected" data-mode="squad">SQUAD</div>
+          <div class="mode-card" data-mode="trio">TRIO</div>
+          <div class="mode-card" data-mode="duo">DUO</div>
+        </div>
+      </div>
+      <button id="play-btn" class="fn-play-btn">GRAJ</button>
+      <div class="play-ready-hint" id="play-ready-hint">Wszyscy muszą być gotowi</div>
+    </div>
+
+    <!-- HIDDEN TABS (karnet, sklep itd.) -->
+    <div class="fn-overlay-panel" id="overlay-panels">
+      <div class="center-panel">
+        <div id="tab-play" class="tab-content active" style="display:none"></div>
+
+        <div id="tab-pass" class="tab-content">
+          <div class="pass-header">
+            <h2 class="section-title">KARNET BOJOWY</h2>
+            <div class="pass-price">800 V-nex</div>
+            <button class="buy-pass-btn" id="buy-pass">KUP KARNET</button>
+          </div>
+
+          <div class="bp-container">
+            <!-- DARMOWA ŚCIEŻKA -->
+            <div class="bp-row free-row">
+              <div class="bp-label">DARMOWY</div>
+              <div class="bp-levels">
+                <div class="bp-slot empty"><span class="bp-lvl">1</span></div>
+                <div class="bp-slot empty"><span class="bp-lvl">2</span></div>
+                <div class="bp-slot empty"><span class="bp-lvl">3</span></div>
+                <div class="bp-slot empty"><span class="bp-lvl">4</span></div>
+                <div class="bp-slot free-reward">
+                  <span class="bp-lvl">5</span>
+                  <div class="bp-icon">💎</div>
+                  <div class="bp-name">100 V-nex</div>
+                </div>
+                <div class="bp-slot empty"><span class="bp-lvl">6</span></div>
+                <div class="bp-slot empty"><span class="bp-lvl">7</span></div>
+                <div class="bp-slot empty"><span class="bp-lvl">8</span></div>
+                <div class="bp-slot empty"><span class="bp-lvl">9</span></div>
+                <div class="bp-slot free-reward previewable" data-preview="pickaxe" data-title="Czarny Kilof" data-desc="Styl kilofa • czarny wygląd startowego kilofa • darmowy karnet lvl 10">
+                  <span class="bp-lvl">10</span>
+                  <div class="bp-preview pick-prev"><div class="mini-pickaxe black"><span class="mp-handle"></span><span class="mp-head"></span></div></div>
+                  <div class="bp-name">Czarny Kilof</div>
+                  <div class="bp-rarity">STYL KILOFA</div>
+                </div>
+                <div class="bp-slot empty"><span class="bp-lvl">20</span></div>
+                <div class="bp-slot empty"><span class="bp-lvl">40</span></div>
+                <div class="bp-slot free-reward">
+                  <span class="bp-lvl">60</span>
+                  <div class="bp-icon">💎</div>
+                  <div class="bp-name">100 V-nex</div>
+                </div>
+                <div class="bp-slot free-reward">
+                  <span class="bp-lvl">80</span>
+                  <div class="bp-icon">💎</div>
+                  <div class="bp-name">100 V-nex</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PŁATNA ŚCIEŻKA -->
+            <div class="bp-row premium-row">
+              <div class="bp-label premium">KARNET</div>
+              <div class="bp-levels">
+                <div class="bp-slot epic previewable" data-preview="skin" data-skin="cien_ulicy" data-require="pass" data-title="Cień Ulicy" data-desc="Skin epicki • czarny strój uliczny • Karnet lvl 1">
+                  <span class="bp-lvl">1</span>
+                  <div class="bp-preview skin-prev" data-skin="cien_ulicy"><div class="mini-char"><i class="mc-hair"></i><i class="mc-head"></i><i class="mc-body"></i><i class="mc-legs"></i></div></div>
+                  <div class="bp-name">Cień Ulicy</div>
+                  <div class="bp-rarity">EPICKI • SKIN</div>
+                </div>
+                <div class="bp-slot previewable" data-preview="emote" data-title="Emotka startowa" data-desc="Emotka • Fortnex Groove • Karnet lvl 5">
+                  <span class="bp-lvl">5</span>
+                  <div class="bp-preview emote-prev">💃</div>
+                  <div class="bp-name">Emotka</div>
+                  <div class="bp-rarity">EMOTKA</div>
+                </div>
+                <div class="bp-slot previewable" data-preview="wrap" data-title="Wrap" data-desc="Folia na broń • kosmetyk • Karnet lvl 10">
+                  <span class="bp-lvl">10</span>
+                  <div class="bp-preview wrap-prev"></div>
+                  <div class="bp-name">Wrap</div>
+                </div>
+                <div class="bp-slot"><span class="bp-lvl">15</span><div class="bp-icon">💎</div><div class="bp-name">100 V-nex</div></div>
+                <div class="bp-slot epic previewable" data-preview="skin" data-skin="neonowa_furia" data-require="pass" data-title="Neonowa Furia" data-desc="Skin epicki • neon róż/cyan • Karnet lvl 25">
+                  <span class="bp-lvl">25</span>
+                  <div class="bp-preview skin-prev" data-skin="neonowa_furia"><div class="mini-char"><i class="mc-hair"></i><i class="mc-head"></i><i class="mc-body"></i><i class="mc-legs"></i></div></div>
+                  <div class="bp-name">Neonowa Furia</div>
+                  <div class="bp-rarity">EPICKI • SKIN</div>
+                </div>
+                <div class="bp-slot previewable" data-preview="glider" data-title="Lotnia karnetu" data-desc="Lotnia • kosmetyk • Karnet lvl 30">
+                  <span class="bp-lvl">30</span>
+                  <div class="bp-preview glider-prev"><div class="mini-glider"></div></div>
+                  <div class="bp-name">Lotnia</div>
+                </div>
+                <div class="bp-slot"><span class="bp-lvl">40</span><div class="bp-icon">💎</div><div class="bp-name">200 V-nex</div></div>
+                <div class="bp-slot epic previewable" data-preview="emote" data-title="Emotka: Fresh" data-desc="Emotka taneczna • podobny vibe do Fresh • Karnet lvl 50">
+                  <span class="bp-lvl">50</span>
+                  <div class="bp-preview emote-prev pulse">🕺</div>
+                  <div class="bp-name">Emotka: Fresh</div>
+                  <div class="bp-rarity">EPICKI • EMOTKA</div>
+                </div>
+                <div class="bp-slot epic previewable" data-preview="skin" data-skin="krol_osiedla" data-require="pass" data-title="Król Osiedla" data-desc="Skin epicki • złoty strój • Karnet lvl 55">
+                  <span class="bp-lvl">55</span>
+                  <div class="bp-preview skin-prev" data-skin="krol_osiedla"><div class="mini-char"><i class="mc-hair"></i><i class="mc-head"></i><i class="mc-body"></i><i class="mc-legs"></i></div></div>
+                  <div class="bp-name">Król Osiedla</div>
+                  <div class="bp-rarity">EPICKI • SKIN</div>
+                </div>
+                <div class="bp-slot previewable" data-preview="emote" data-title="Emotka" data-desc="Emotka • Karnet lvl 60">
+                  <span class="bp-lvl">60</span>
+                  <div class="bp-preview emote-prev">🎭</div>
+                  <div class="bp-name">Emotka</div>
+                </div>
+                <div class="bp-slot"><span class="bp-lvl">70</span><div class="bp-icon">💎</div><div class="bp-name">200 V-nex</div></div>
+                <div class="bp-slot epic previewable" data-preview="skin" data-skin="ostatni_lowca" data-require="pass" data-title="Ostatni Łowca" data-desc="Skin epicki • militarny zielony • Karnet lvl 75">
+                  <span class="bp-lvl">75</span>
+                  <div class="bp-preview skin-prev" data-skin="ostatni_lowca"><div class="mini-char"><i class="mc-hair"></i><i class="mc-head"></i><i class="mc-body"></i><i class="mc-legs"></i></div></div>
+                  <div class="bp-name">Ostatni Łowca</div>
+                  <div class="bp-rarity">EPICKI • SKIN</div>
+                </div>
+                <div class="bp-slot previewable" data-preview="wrap" data-title="Wrap" data-desc="Folia • Karnet lvl 85">
+                  <span class="bp-lvl">85</span>
+                  <div class="bp-preview wrap-prev"></div>
+                  <div class="bp-name">Wrap</div>
+                </div>
+                <div class="bp-slot"><span class="bp-lvl">95</span><div class="bp-icon">💎</div><div class="bp-name">300 V-nex</div></div>
+                <div class="bp-slot legendary previewable" data-preview="skin" data-skin="wiezien_seweryn" data-require="pass" data-title="WIĘZIEŃ SEWERYN" data-desc="Skin LEGENDARNY • ~40 lat • ciemny blond, zakola • pomarańczowy strój więzienny • Karnet lvl 100">
+                  <span class="bp-lvl">100</span>
+                  <div class="bp-preview skin-prev" data-skin="wiezien_seweryn"><div class="mini-char"><i class="mc-hair"></i><i class="mc-head"></i><i class="mc-body"></i><i class="mc-legs"></i></div></div>
+                  <div class="bp-name">WIĘZIEŃ SEWERYN</div>
+                  <div class="bp-rarity">LEGENDARNY • SKIN</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="bp-info">Darmowa ścieżka: 100 V-nex (lvl 5) • Styl kilofa: Czarny (lvl 10) • 100 V-nex (lvl 60) • 100 V-nex (lvl 80)</p>
+        </div>
+
+        <div id="tab-shop" class="tab-content">
+          <h2 class="section-title">SKLEP</h2>
+          <p class="shop-hint">Kliknij kafelek = duży podgląd. Wiesz dokładnie za co płacisz.</p>
+          <div class="shop-grid">
+            <div class="shop-item" data-price="1200" data-skin="shop_female" data-require="shop" data-preview="skin" data-title="Raiderka Fortnex" data-desc="Skin żeński • gogle • facepaint • bordowy top • brązowe spodnie • Sezon 1 • rzadki">
+              <div class="shop-rarity rare">RZADKI</div>
+              <div class="shop-preview skin-prev" data-skin="shop_female">
+                <div class="mini-char"><i class="mc-hair"></i><i class="mc-head"></i><i class="mc-body"></i><i class="mc-legs"></i></div>
+              </div>
+              <div class="shop-name">Raiderka Fortnex</div>
+              <div class="shop-type">SKIN</div>
+              <div class="shop-price">1200 V-nex</div>
+            </div>
+            <div class="shop-item" data-price="1200" data-skin="shop_male" data-require="shop" data-preview="skin" data-title="Trooper Fortnex" data-desc="Skin męski • hełm • chusta • moro • tatuaż FORTNEX • Sezon 1 • rzadki">
+              <div class="shop-rarity rare">RZADKI</div>
+              <div class="shop-preview skin-prev" data-skin="shop_male">
+                <div class="mini-char"><i class="mc-hair"></i><i class="mc-head"></i><i class="mc-body"></i><i class="mc-legs"></i></div>
+              </div>
+              <div class="shop-name">Trooper Fortnex</div>
+              <div class="shop-type">SKIN</div>
+              <div class="shop-price">1200 V-nex</div>
+            </div>
+            <div class="shop-item" data-price="1200" data-preview="pickaxe" data-title="Kilof Raidera" data-desc="Kilof • drewniany trzonek • czerwono-metalowa głowica • Sezon 1 • rzadki">
+              <div class="shop-rarity rare">RZADKI</div>
+              <div class="shop-preview pick-prev">
+                <div class="mini-pickaxe"><span class="mp-handle"></span><span class="mp-head"></span></div>
+              </div>
+              <div class="shop-name">Kilof Raidera</div>
+              <div class="shop-type">KILOF</div>
+              <div class="shop-price">1200 V-nex</div>
+            </div>
+            <div class="shop-item" data-price="800" data-preview="glider" data-title="Lotnia Assault Fortnex" data-desc="Lotnia wojskowa • zieleń • napis FORTNEX • Sezon 1 • rzadka">
+              <div class="shop-rarity rare">RZADKI</div>
+              <div class="shop-preview glider-prev">
+                <div class="mini-glider"></div>
+              </div>
+              <div class="shop-name">Lotnia Assault Fortnex</div>
+              <div class="shop-type">LOTNIA</div>
+              <div class="shop-price">800 V-nex</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-locker" class="tab-content">
+          <h2 class="section-title">SZAFKA</h2>
+          <p class="locker-info">Twoje kosmetyki</p>
+          
+          <div class="locker-grid" id="locker-grid">
+            <div class="locker-item equipped" data-skin="bambika">
+              <div class="locker-rarity default">DOMYŚLNA</div>
+              <div class="locker-preview bambika"></div>
+              <div class="locker-name">Bambika</div>
+              <div class="locker-type">Skin</div>
+              <div class="equipped-badge">WYPOSAŻONY</div>
+            </div>
+            <div class="locker-item" data-skin="cien_ulicy">
+              <div class="locker-rarity" style="color:#b026ff">EPICKI</div>
+              <div class="locker-preview" style="background:linear-gradient(135deg,#222,#111)"></div>
+              <div class="locker-name">Cień Ulicy</div>
+              <div class="locker-type">Skin • Karnet</div>
+            </div>
+            <div class="locker-item" data-skin="neonowa_furia">
+              <div class="locker-rarity" style="color:#b026ff">EPICKI</div>
+              <div class="locker-preview" style="background:linear-gradient(135deg,#ff2d95,#00f0ff)"></div>
+              <div class="locker-name">Neonowa Furia</div>
+              <div class="locker-type">Skin • Karnet</div>
+            </div>
+            <div class="locker-item" data-skin="krol_osiedla">
+              <div class="locker-rarity" style="color:#b026ff">EPICKI</div>
+              <div class="locker-preview" style="background:linear-gradient(135deg,#ffd700,#1a1a1a)"></div>
+              <div class="locker-name">Król Osiedla</div>
+              <div class="locker-type">Skin • Karnet</div>
+            </div>
+            <div class="locker-item" data-skin="ostatni_lowca">
+              <div class="locker-rarity" style="color:#b026ff">EPICKI</div>
+              <div class="locker-preview" style="background:linear-gradient(135deg,#2d5a27,#8b4513)"></div>
+              <div class="locker-name">Ostatni Łowca</div>
+              <div class="locker-type">Skin • Karnet</div>
+            </div>
+            <div class="locker-item" data-skin="wiezien_seweryn">
+              <div class="locker-rarity" style="color:#ffcc00">LEGENDARNY</div>
+              <div class="locker-preview" style="background:linear-gradient(135deg,#ff6b00,#333)"></div>
+              <div class="locker-name">WIĘZIEŃ SEWERYN</div>
+              <div class="locker-type">Skin • Karnet</div>
+            </div>
+            <div class="locker-item" data-skin="shop_female">
+              <div class="locker-rarity rare" style="color:#4da6ff">RZADKI</div>
+              <div class="locker-preview" style="background:linear-gradient(135deg,#9c3b2e,#5c4a3a)"></div>
+              <div class="locker-name">Raiderka Fortnex</div>
+              <div class="locker-type">Skin • Sklep</div>
+            </div>
+            <div class="locker-item" data-skin="shop_male">
+              <div class="locker-rarity rare" style="color:#4da6ff">RZADKI</div>
+              <div class="locker-preview" style="background:linear-gradient(135deg,#4a5c28,#8a7a3a)"></div>
+              <div class="locker-name">Trooper Fortnex</div>
+              <div class="locker-type">Skin • Sklep</div>
+            </div>
+            <div class="locker-item equipped-emote" data-emote="fortnex_groove">
+              <div class="locker-rarity default">DOMYŚLNA</div>
+              <div class="locker-preview" style="background:linear-gradient(135deg,#ff6b00,#ffcc00);display:flex;align-items:center;justify-content:center;font-size:36px">💃</div>
+              <div class="locker-name">Fortnex Groove</div>
+              <div class="locker-type">Emotka startowa</div>
+              <div class="equipped-badge">EMOTKA</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-friends" class="tab-content">
+          <h2 class="section-title">ZNAJOMI</h2>
+          <p class="friends-flow-hint">1. Dodaj zioma <strong>po nazwie gracza</strong> → 2. Zaproś do ekipy → 3. Host klika GRAJ</p>
+
+          <div class="my-epic-code-box">
+            <span>Jesteś widoczny jako:</span>
+            <strong id="my-display-name">—</strong>
+            <span class="online-pill" id="online-pill">Offline</span>
+          </div>
+
+          <div class="add-friend">
+            <input type="text" id="friend-name" placeholder="Nazwa gracza (dokładnie jak u niego)">
+            <button id="add-friend-btn">DODAJ ZNAJOMEGO</button>
+          </div>
+          <div class="friends-list" id="friends-list">
+            <!-- wypełniane z JS -->
+          </div>
+
+          <div class="party-section">
+            <h3>TWOJA EKIPA</h3>
+            <div class="party-status" id="party-status">Nie jesteś w ekipie — zaproś znajomego</div>
+            <div class="party-ready-line" id="party-ready-line">Gotowość: —</div>
+            <div class="party-slots" id="party-slots">
+              <div class="party-slot filled" data-slot="0">Ty</div>
+              <div class="party-slot empty" data-slot="1">+</div>
+              <div class="party-slot empty" data-slot="2">+</div>
+              <div class="party-slot empty" data-slot="3">+</div>
+            </div>
+            <button type="button" id="btn-leave-party" class="party-btn leave">OPUŚĆ EKIPĘ</button>
+            <p class="party-info">Jak w Fortnite: każdy musi być GOTOWY. Gdy cała ekipa gotowa — host odpala mecz (albo start automatyczny).</p>
+          </div>
+        </div>
+
+        <!-- Toast zaproszenia do ekipy -->
+        <div id="party-invite-toast" class="party-invite-toast hidden">
+          <div class="pit-text"><strong id="pit-from">Gracz</strong> zaprasza Cię do ekipy</div>
+          <div class="pit-actions">
+            <button type="button" id="pit-accept" class="party-btn create">DOŁĄCZ</button>
+            <button type="button" id="pit-decline" class="party-btn copy">ODRZUĆ</button>
+          </div>
+        </div>
+
+        <!-- USTAWIENIA -->
+        <div id="tab-settings" class="tab-content">
+          <h2 class="section-title">USTAWIENIA</h2>
+
+          <div class="settings-section">
+            <h3>Grafika</h3>
+            <div class="settings-row">
+              <span>Jakość grafiki</span>
+              <select id="setting-quality">
+                <option value="low">Niska</option>
+                <option value="medium" selected>Średnia</option>
+                <option value="high">Wysoka</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <span>Cienie</span>
+              <input type="checkbox" id="setting-shadows" checked>
+            </div>
+            <div class="settings-row">
+              <span>Efekty cząsteczek</span>
+              <input type="checkbox" id="setting-particles" checked>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>Sterowanie (kliknij i wciśnij klawisz)</h3>
+            <div class="bind-grid" id="bind-grid">
+              <div class="bind-row" data-action="up"><span>Przód</span><button class="bind-btn">W</button></div>
+              <div class="bind-row" data-action="down"><span>Tył</span><button class="bind-btn">S</button></div>
+              <div class="bind-row" data-action="left"><span>Lewo</span><button class="bind-btn">A</button></div>
+              <div class="bind-row" data-action="right"><span>Prawo</span><button class="bind-btn">D</button></div>
+              <div class="bind-row" data-action="jump"><span>Skok</span><button class="bind-btn">SPACE</button></div>
+              <div class="bind-row" data-action="crouch"><span>Kucanie</span><button class="bind-btn">C</button></div>
+              <div class="bind-row" data-action="reload"><span>Przeładuj</span><button class="bind-btn">R</button></div>
+              <div class="bind-row" data-action="interact"><span>Podnieś / Użyj</span><button class="bind-btn">E</button></div>
+              <div class="bind-row" data-action="build"><span>Buduj</span><button class="bind-btn">F</button></div>
+              <div class="bind-row" data-action="edit"><span>Edytuj</span><button class="bind-btn">G</button></div>
+            </div>
+            <button id="reset-binds" class="secondary-login" style="margin-top:16px;max-width:220px">Przywróć domyślne</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING - oryginalny ekran Fortnex -->
+  <div id="loading" class="screen">
+    <div class="loading-content">
+      <div class="logo">FORTNEX</div>
+      <p class="loading-tagline">BATTLE ROYALE</p>
+      <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+      <p id="loading-percent">0%</p>
+      <p id="loading-text">Przygotowywanie meczu...</p>
+      <p class="small" id="loading-sub">Fortnex • Oryginalny tryb Battle Royale</p>
+      <div class="loading-tips">
+        <p id="loading-tip">Wskazówka: Z busa skaczysz Spacją</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="screen">
+    <canvas id="game-canvas"></canvas>
+    <div id="game-ui">
+      <div class="hud-top">
+        <div>Żywych: <span id="alive-count">100</span></div>
+        <div id="zone-timer">Strefa za 40s</div>
+        <div>Eliminacje: <span id="kill-count">0</span></div>
+      </div>
+      <div class="crosshair" id="crosshair"><span></span></div>
+      <div id="hit-marker" class="hit-marker hidden">✕</div>
+      <div id="damage-vignette"></div>
+      <div id="hud-phase" class="hud-phase">BUS</div>
+      <div id="kill-feed"></div>
+      <div class="hud-bottom-left">
+        <div class="bar-container">
+          <span>HP</span>
+          <div class="bar"><div class="bar-fill hp" id="hp-fill"></div></div>
+          <span id="hp-text">100</span>
+        </div>
+        <div class="bar-container">
+          <span>TARCZA</span>
+          <div class="bar"><div class="bar-fill shield" id="shield-fill"></div></div>
+          <span id="shield-text">0</span>
+        </div>
+      </div>
+      <div class="hud-build">
+        <div class="mat">🌲 <span id="mat-wood">150</span></div>
+        <div class="mat">🪨 <span id="mat-stone">100</span></div>
+        <div class="mat">⚙️ <span id="mat-metal">50</span></div>
+      </div>
+      <div class="hud-weapon">
+        <div id="weapon-name">Karabin</div>
+        <div id="weapon-ammo">30 / 90</div>
+      </div>
+      <div class="hud-help">WASD ruch • Mysz celuj • LPM strzał • Spacja skok • C/Ctrl kucaj • 1-3 buduj • G edytuj • B emotka • Shift bieg • R przeładuj • E loot</div>
+      <button id="exit-game">WYJDŹ</button>
+
+      <!-- Kontrolki mobilne (telefon / iPad) -->
+      <div id="mobile-controls">
+        <div class="mobile-hint">Lewa = ruch • Prawa = celuj/strzał</div>
+        <button id="btn-jump" class="mobile-btn">SKOK</button>
+        <button id="btn-crouch" class="mobile-btn">KUCAJ</button>
+        <button id="btn-build" class="mobile-btn">BUDUJ</button>
+        <button id="btn-edit" class="mobile-btn">EDYTUJ</button>
+        <button id="btn-reload" class="mobile-btn">R</button>
+        <button id="btn-shoot" class="mobile-btn shoot">STRZAŁ</button>
+      </div>
+    </div>
+
+    <div id="death-screen" class="overlay hidden">
+      <h1>WYELIMINOWANY</h1>
+      <p id="death-reason">Zabił Cię bot</p>
+      <p>Eliminacje: <span id="final-kills">0</span></p>
+      <div class="overlay-buttons">
+        <button id="return-lobby">POWRÓT DO LOBBY</button>
+        <button id="spectate-btn" class="secondary-btn">ZAGRAJ PONOWNIE / ODRODŹ</button>
+      </div>
+      <p class="spectate-info" id="spectate-info" style="display:none;">Oglądasz gracza który Cię wyeliminował... Szukanie nowej gry...</p>
+    </div>
+
+    <div id="win-screen" class="overlay hidden">
+      <h1>VICTORY ROYALE</h1>
+      <p>Jesteś ostatni!</p>
+      <p>Eliminacje: <span id="win-kills">0</span></p>
+      <div class="overlay-buttons">
+        <button id="win-lobby">POWRÓT DO LOBBY</button>
+        <button id="win-again" class="secondary-btn">ZAGRAJ PONOWNIE</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+
+  <!-- PODGLĄD SKLEP / KARNET -->
+  <div id="item-preview-modal" class="item-preview-modal hidden">
+    <div class="ipm-card">
+      <button type="button" class="ipm-close" id="ipm-close">✕</button>
+      <div class="ipm-rarity" id="ipm-rarity">RZADKI</div>
+      <div class="ipm-stage" id="ipm-stage"></div>
+      <h3 id="ipm-title">Nazwa</h3>
+      <p id="ipm-desc">Opis</p>
+      <div class="ipm-type" id="ipm-type">SKIN</div>
+      <button type="button" class="ipm-close-bar" id="ipm-close-bar">ZAMKNIJ</button>
+    </div>
+  </div>
+
+</body>
+</html>
