@@ -557,8 +557,8 @@ body {
 .fn-character[data-skin="krol_osiedla"] { --body:#ffd700; --accent:#1a1a1a; --skin:#c68642; --legs:#222; --hair:#1a1a1a; }
 .fn-character[data-skin="ostatni_lowca"] { --body:#2d5a27; --accent:#8b4513; --skin:#e0ac69; --legs:#3d2914; --hair:#4a3728; }
 .fn-character[data-skin="wiezien_seweryn"] { --body:#ff6b00; --accent:#fff; --skin:#e0ac69; --legs:#ff6b00; --hair:#c4a35a; }
-.fn-character[data-skin="shop_female"] { --body:#8B3A2F; --accent:#4a2c1a; --skin:#c68642; --legs:#2a2420; --hair:#1a120e; }
-.fn-character[data-skin="shop_male"] { --body:#1a1a1a; --accent:#8B2500; --skin:#5c3a2a; --legs:#222220; --hair:#3d2b1f; }
+.fn-character[data-skin="shop_female"] { --body:#9c3b2e; --accent:#5c4033; --skin:#d4a574; --legs:#5c4a3a; --hair:#1a120e; }
+.fn-character[data-skin="shop_male"] { --body:#4a5c28; --accent:#c4b896; --skin:#5c3a2a; --legs:#8a7a3a; --hair:#1a1a1a; }
 
 .fn-emote-btn {
   margin-top: 14px;
@@ -1055,4 +1055,29 @@ body {
 .lobby-3d-wrap.has-3d .fn-character {
   opacity: 0;
   pointer-events: none;
+}
+
+/* SKIN POLISH — wyraźniejsze postacie w lobby / sklepie */
+.fn-character {
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.45));
+  transform: scale(1.15);
+}
+.fn-character .char-head {
+  border: 2px solid rgba(0,0,0,0.15);
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,0.08);
+}
+.fn-character .char-torso {
+  border-radius: 8px 8px 4px 4px;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.08);
+}
+.mini-char {
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));
+  transform: scale(1.2);
+}
+.shop-preview, .bp-preview, .locker-preview {
+  background: radial-gradient(ellipse at 50% 70%, rgba(255,255,255,0.12), transparent 60%),
+              linear-gradient(160deg, #2a2a40 0%, #1a1a28 100%) !important;
+}
+.mini-pickaxe .mp-head {
+  box-shadow: 0 0 8px rgba(180,60,40,0.5);
 }

@@ -1093,206 +1093,313 @@ const SKINS = {
 };
 
 function makeChar(skinId) {
-  // Stylizowany humanoid bliższy proporcjom Fortnite (duża głowa, atletyczna sylwetka)
-  // To NIE jest Unreal — ale maksymalnie w tym kierunku w Three.js
+  // Maksymalnie "ludzko" w Three.js: prawie same sfery/cylindry, zero klocków na ciało
   const s = SKINS[skinId] || SKINS.bambika;
-  const female = (s.gender === 'female');
+  const female = s.gender === 'female';
   const g = new THREE.Group();
-  const mat = (c, opts = {}) => new THREE.MeshStandardMaterial({
-    color: c,
-    roughness: opts.roughness ?? 0.48,
-    metalness: opts.metalness ?? 0.05,
-    emissive: opts.emissive ?? 0x000000,
-    emissiveIntensity: opts.em ?? 0
+  const M = (color, o = {}) => new THREE.MeshLambertMaterial({
+    color,
+    emissive: o.emissive || 0x000000,
+    emissiveIntensity: o.em || 0
   });
 
-  // Proporcje FN-like: większa głowa, krótsze nogi względem torsu, wyraźne barki
-  const scale = 1.0;
-  const shoulderX = female ? 0.36 : 0.44;
-  const bodyW = female ? 0.44 : 0.56;
-  const bodyD = female ? 0.28 : 0.34;
-  const legLen = 0.68;
-  const torsoH = female ? 0.58 : 0.66;
+  // Proporcje stylizowane (FN): głowa ~1/4–1/5 wzrostu, wąska talia, barki
+  const S = female ? 0.92 : 1.0; // lekko mniejsza kobieta w barkach, ten sam wzrost
+  const skinM = M(s.skin);
+  const bodyM = M(s.body);
+  const legM = M(s.legs);
+  const hairM = M(s.hair);
+  const accM = M(s.accent || 0x444444);
 
-  // === STOPY ===
-  const bootCol = 0x2a2218;
-  const footL = new THREE.Mesh(new THREE.BoxGeometry(female ? 0.15 : 0.18, 0.12, 0.30), mat(bootCol, { roughness: 0.85 }));
-  footL.position.set(-0.13, 0.06, 0.05);
-  const footR = footL.clone(); footR.position.x = 0.13;
+  // --- STOPY (zaokrąglone) ---
+  const bootM = M(0x141210);
+  const mkBoot = (x) => {
+    const b = new THREE.Group();
+    const sole = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), bootM);
+    sole.scale.set(female ? 0.85 : 1, 0.45, 1.35);
+    sole.position.set(0, 0.04, 0.04);
+    const shaft = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), bootM);
+    shaft.scale.set(0.95, 1.1, 1.0);
+    shaft.position.set(0, 0.12, 0);
+    b.add(sole, shaft);
+    b.position.x = x;
+    return b;
+  };
+  const footL = mkBoot(female ? -0.105 : -0.12);
+  const footR = mkBoot(female ? 0.105 : 0.12);
 
-  // === NOGI (cylindry + udo szersze) ===
-  const legMat = mat(s.legs, { roughness: 0.7 });
-  const thighL = new THREE.Mesh(new THREE.CylinderGeometry(female ? 0.10 : 0.12, female ? 0.09 : 0.11, legLen * 0.55, 12), legMat);
-  thighL.position.set(-0.13, 0.42, 0);
-  const thighR = thighL.clone(); thighR.position.x = 0.13;
-  const calfL = new THREE.Mesh(new THREE.CylinderGeometry(female ? 0.075 : 0.09, female ? 0.08 : 0.095, legLen * 0.45, 12), legMat);
-  calfL.position.set(-0.13, 0.18, 0);
-  const calfR = calfL.clone(); calfR.position.x = 0.13;
+  // --- NOGI (tylko cylindry + sfery) ---
+  const mkLeg = (x) => {
+    const leg = new THREE.Group();
+    const thigh = new THREE.Mesh(
+      new THREE.CylinderGeometry(female ? 0.088 : 0.105, female ? 0.078 : 0.092, 0.38, 14),
+      legM
+    );
+    thigh.position.y = 0.42;
+    const knee = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.078 : 0.092, 12, 10), legM);
+    knee.position.y = 0.24;
+    const calf = new THREE.Mesh(
+      new THREE.CylinderGeometry(female ? 0.062 : 0.078, female ? 0.068 : 0.082, 0.30, 14),
+      legM
+    );
+    calf.position.y = 0.10;
+    const pad = new THREE.Mesh(new THREE.TorusGeometry(female ? 0.082 : 0.098, 0.02, 8, 14), accM);
+    pad.position.y = 0.24;
+    pad.rotation.y = Math.PI / 2;
+    leg.add(thigh, knee, calf, pad);
+    leg.position.x = x;
+    return leg;
+  };
+  const legL = mkLeg(female ? -0.105 : -0.12);
+  const legR = mkLeg(female ? 0.105 : 0.12);
 
-  // nakolanniki
-  const kneeL = new THREE.Mesh(new THREE.CylinderGeometry(female ? 0.105 : 0.125, female ? 0.105 : 0.125, 0.1, 10), mat(s.accent || 0x444, { metalness: 0.2, roughness: 0.6 }));
-  kneeL.position.set(-0.13, 0.30, 0.01);
-  const kneeR = kneeL.clone(); kneeR.position.x = 0.13;
+  // --- BIODRA / MIEDNICA ---
+  const hips = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.20 : 0.22, 14, 12), legM);
+  hips.position.y = 0.70;
+  hips.scale.set(female ? 1.28 : 1.12, 0.52, 0.90);
 
-  // === BIODRA ===
-  const hips = new THREE.Mesh(
-    new THREE.SphereGeometry(female ? 0.22 : 0.24, 12, 10),
-    legMat
+  // --- TORS (cylinder + sfery, bez boxów) ---
+  const waist = new THREE.Mesh(
+    new THREE.CylinderGeometry(female ? 0.15 : 0.18, female ? 0.19 : 0.22, 0.28, 14),
+    bodyM
   );
-  hips.position.y = 0.78;
-  hips.scale.set(female ? 1.15 : 1.05, 0.55, 0.85);
+  waist.position.y = 0.92;
+  const torso = new THREE.Mesh(
+    new THREE.CylinderGeometry(female ? 0.17 : 0.22, female ? 0.15 : 0.18, 0.36, 14),
+    bodyM
+  );
+  torso.position.y = 1.18;
+  const chest = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.175 : 0.23, 14, 12), bodyM);
+  chest.position.y = 1.34;
+  chest.scale.set(female ? 1.15 : 1.2, female ? 0.55 : 0.62, female ? 0.85 : 0.9);
 
-  // === TORS (trapez: szerszy u góry u mężczyzn) ===
-  const body = new THREE.Mesh(
-    new THREE.BoxGeometry(bodyW, torsoH, bodyD),
-    mat(s.body, { roughness: 0.5 })
-  );
-  body.position.y = 1.22;
-  // klatka
-  const chest = new THREE.Mesh(
-    new THREE.SphereGeometry(female ? 0.20 : 0.26, 14, 12),
-    mat(s.body, { roughness: 0.48 })
-  );
-  chest.position.y = 1.42;
-  chest.scale.set(bodyW / 0.42, female ? 0.5 : 0.58, bodyD / 0.32);
-
-  // pasek
-  const belt = new THREE.Mesh(
-    new THREE.TorusGeometry(bodyW * 0.48, 0.035, 8, 20),
-    mat(s.accent || 0x333, { metalness: 0.35, roughness: 0.45 })
-  );
-  belt.position.y = 0.92;
+  // pasek = torus
+  const belt = new THREE.Mesh(new THREE.TorusGeometry(female ? 0.175 : 0.205, 0.025, 8, 20), accM);
   belt.rotation.x = Math.PI / 2;
+  belt.position.y = 0.80;
+  const buckle = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), M(0xececec));
+  buckle.position.set(0, 0.80, female ? 0.18 : 0.22);
+  buckle.scale.set(1.2, 0.9, 0.5);
 
-  // === RAMIONA ===
-  const armLG = new THREE.Group(); armLG.position.set(-shoulderX, 1.52, 0);
-  const upperArmL = new THREE.Mesh(new THREE.CylinderGeometry(female ? 0.065 : 0.085, female ? 0.06 : 0.075, 0.38, 10), mat(s.body));
-  upperArmL.position.y = -0.16;
-  armLG.add(upperArmL);
-  const foreArmL = new THREE.Mesh(new THREE.CylinderGeometry(female ? 0.055 : 0.07, female ? 0.05 : 0.06, 0.34, 10), mat(s.body));
-  foreArmL.position.y = -0.48;
-  armLG.add(foreArmL);
-  const handL = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.055 : 0.065, 10, 8), mat(s.skin, { roughness: 0.55 }));
-  handL.position.y = -0.68;
-  armLG.add(handL);
+  // --- RAMIONA ---
+  const shX = female ? 0.30 : 0.38;
+  const mkArm = (side) => {
+    const arm = new THREE.Group();
+    arm.position.set(side * shX, 1.36, 0);
+    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.07 : 0.09, 12, 10), bodyM);
+    const upper = new THREE.Mesh(
+      new THREE.CylinderGeometry(female ? 0.055 : 0.072, female ? 0.048 : 0.062, 0.32, 12),
+      bodyM
+    );
+    upper.position.y = -0.16;
+    const elbow = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.048 : 0.06, 10, 8), bodyM);
+    elbow.position.y = -0.32;
+    const lower = new THREE.Mesh(
+      new THREE.CylinderGeometry(female ? 0.045 : 0.055, female ? 0.04 : 0.048, 0.28, 12),
+      bodyM
+    );
+    lower.position.y = -0.46;
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.05 : 0.06, 12, 10), skinM);
+    hand.position.y = -0.62;
+    arm.add(shoulder, upper, elbow, lower, hand);
+    // lekka postura
+    arm.rotation.z = side * (female ? 0.2 : 0.32);
+    arm.rotation.x = 0.12;
+    return arm;
+  };
+  const armL = mkArm(-1);
+  const armR = mkArm(1);
 
-  const armRG = new THREE.Group(); armRG.position.set(shoulderX, 1.52, 0);
-  const upperArmR = upperArmL.clone(); armRG.add(upperArmR);
-  const foreArmR = foreArmL.clone(); armRG.add(foreArmR);
-  const handR = handL.clone(); armRG.add(handR);
+  // --- SZYJA + GŁOWA (organiczna) ---
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.12, 12), skinM);
+  neck.position.y = 1.48;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.26 : 0.28, 20, 18), skinM);
+  head.position.y = 1.74;
+  head.scale.set(0.93, 1.08, 0.90);
 
-  // barki
-  const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.08 : 0.1, 10, 8), mat(s.body));
-  shoulderL.position.set(-shoulderX, 1.52, 0);
-  const shoulderR = shoulderL.clone(); shoulderR.position.x = shoulderX;
+  // włosy — „czapka” ze sfery + tylna objętość
+  const hairTop = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.27 : 0.29, 16, 12), hairM);
+  hairTop.position.y = 1.86;
+  hairTop.scale.set(1.05, 0.42, 1.08);
+  const hairBack = new THREE.Mesh(new THREE.SphereGeometry(female ? 0.22 : 0.24, 12, 10), hairM);
+  hairBack.position.set(0, 1.72, -0.12);
+  hairBack.scale.set(1.0, 0.9, 0.7);
 
-  // === SZYJA + GŁOWA (większa — styl FN) ===
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.14, 12), mat(s.skin, { roughness: 0.55 }));
-  neck.position.y = 1.62;
-
-  const headR = female ? 0.28 : 0.30;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(headR, 20, 16), mat(s.skin, { roughness: 0.52 }));
-  head.position.y = 1.92;
-  head.scale.set(0.95, 1.05, 0.9);
-
-  // włosy / czapka bazowa
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(headR * 1.05, 16, 12), mat(s.hair, { roughness: 0.75 }));
-  hair.position.y = 2.02;
-  hair.scale.set(1.02, 0.55, 1.05);
-
-  // twarz — oczy + białka
-  const eyeWhiteL = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), mat(0xf5f5f5, { roughness: 0.3 }));
-  eyeWhiteL.position.set(-0.09, 1.94, headR * 0.78);
-  eyeWhiteL.scale.set(1, 0.85, 0.5);
-  const eyeWhiteR = eyeWhiteL.clone(); eyeWhiteR.position.x = 0.09;
-  const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 8), mat(0x1a1208, { roughness: 0.2 }));
-  pupilL.position.set(-0.09, 1.94, headR * 0.88);
-  const pupilR = pupilL.clone(); pupilR.position.x = 0.09;
-
-  // nos
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), mat(s.skin, { roughness: 0.55 }));
-  nose.position.set(0, 1.88, headR * 0.85);
-  nose.scale.set(0.7, 1, 0.9);
-
-  // usta
-  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.02), mat(0x8a4050, { roughness: 0.6 }));
-  mouth.position.set(0, 1.78, headR * 0.82);
+  // twarz
+  const mkEye = (x) => {
+    const e = new THREE.Group();
+    const white = new THREE.Mesh(new THREE.SphereGeometry(0.042, 12, 10), M(0xffffff));
+    white.scale.set(1.15, 0.9, 0.35);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.02, 10, 8), M(0x1a1008));
+    pupil.position.z = 0.03;
+    const shine = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 6), M(0xffffff));
+    shine.position.set(0.008, 0.008, 0.045);
+    e.add(white, pupil, shine);
+    e.position.set(x, 1.76, female ? 0.20 : 0.22);
+    return e;
+  };
+  const eyeL = mkEye(-0.09);
+  const eyeR = mkEye(0.09);
+  const browL = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), hairM);
+  browL.scale.set(1.8, 0.35, 0.5);
+  browL.position.set(-0.09, 1.84, 0.20);
+  const browR = browL.clone(); browR.position.x = 0.09;
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8), skinM);
+  nose.position.set(0, 1.70, female ? 0.23 : 0.25);
+  nose.scale.set(0.65, 1.15, 0.85);
+  const mouth = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), M(0xa05060));
+  mouth.position.set(0, 1.60, female ? 0.20 : 0.22);
+  mouth.scale.set(1.5, 0.35, 0.5);
+  // uszy
+  const earL = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), skinM);
+  earL.position.set(female ? -0.24 : -0.26, 1.74, 0);
+  earL.scale.set(0.5, 1.0, 0.7);
+  const earR = earL.clone(); earR.position.x = -earL.position.x;
 
   const parts = [
-    footL, footR, thighL, thighR, calfL, calfR, kneeL, kneeR,
-    hips, body, chest, belt, armLG, armRG, shoulderL, shoulderR,
-    neck, head, hair, eyeWhiteL, eyeWhiteR, pupilL, pupilR, nose, mouth
+    footL, footR, legL, legR, hips, waist, torso, chest, belt, buckle,
+    armL, armR, neck, head, hairTop, hairBack, eyeL, eyeR, browL, browR, nose, mouth, earL, earR
   ];
 
-  // —— detale shop / legenda ——
+  // ===== DETALE (też bez klocków gdzie się da) =====
+  if (skinId === 'bambika') {
+    const visor = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.03, 8, 16), M(0x7ec8e8, { emissive: 0x224466, em: 0.25 }));
+    visor.position.set(0, 1.80, 0.12);
+    visor.rotation.x = Math.PI / 2;
+    parts.push(visor);
+  }
+  if (skinId === 'cien_ulicy') {
+    const hood = new THREE.Mesh(new THREE.SphereGeometry(0.34, 14, 12), M(0x151515));
+    hood.position.set(0, 1.78, -0.05);
+    hood.scale.set(1.15, 0.9, 1.2);
+    const mask = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), M(0x0d0d0d));
+    mask.position.set(0, 1.64, 0.18);
+    mask.scale.set(1.3, 0.7, 0.5);
+    parts.push(hood, mask);
+  }
+  if (skinId === 'neonowa_furia') {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.028, 8, 20), M(0x00f0ff, { emissive: 0x00f0ff, em: 0.75 }));
+    ring.position.y = 1.18; ring.rotation.x = Math.PI / 2;
+    const streak = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 8), M(0xff2d95, { emissive: 0xff2d95, em: 0.5 }));
+    streak.position.set(0.2, 1.18, 0);
+    parts.push(ring, streak);
+  }
+  if (skinId === 'krol_osiedla') {
+    const crown = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), M(0xffd700, { emissive: 0x553300, em: 0.3 }));
+    crown.position.y = 2.02;
+    crown.scale.set(1.1, 0.55, 1.1);
+    // zęby korony
+    for (let i = 0; i < 5; i++) {
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), M(0xffd700, { emissive: 0x664400, em: 0.2 }));
+      const a = (i / 5) * Math.PI * 2;
+      tip.position.set(Math.cos(a) * 0.12, 2.10, Math.sin(a) * 0.12);
+      tip.scale.set(0.7, 1.4, 0.7);
+      parts.push(tip);
+    }
+    const chain = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.018, 8, 16), M(0xffd700));
+    chain.position.set(0, 1.50, 0.06); chain.rotation.x = Math.PI / 2;
+    parts.push(crown, chain);
+  }
+  if (skinId === 'ostatni_lowca') {
+    const vest = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.36, 12), M(0x3d2914));
+    vest.position.y = 1.15;
+    const pouch = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M(0x5c4030));
+    pouch.position.set(0.16, 0.95, 0.14);
+    parts.push(vest, pouch);
+  }
+  if (skinId === 'wiezien_seweryn') {
+    const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.23, 0.13, 12), M(0xffffff));
+    stripe.position.y = 1.12;
+    const badge = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), M(0x222222));
+    badge.position.set(0, 1.12, 0.22);
+    badge.scale.set(1.2, 1.4, 0.4);
+    hairTop.scale.set(1.08, 0.28, 1.12);
+    hairTop.position.y = 1.90;
+    parts.push(stripe, badge);
+  }
   if (s.goggles || skinId === 'shop_female') {
-    const gogBand = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.02, 8, 20), mat(0x333333, { metalness: 0.4 }));
-    gogBand.position.set(0, 2.0, 0.05);
-    gogBand.rotation.x = Math.PI / 2;
-    const lensL = new THREE.Mesh(new THREE.CircleGeometry(0.07, 12), mat(0x88aacc, { metalness: 0.7, roughness: 0.25, emissive: 0x224455, em: 0.2 }));
-    lensL.position.set(-0.08, 2.0, headR * 0.75);
-    const lensR = lensL.clone(); lensR.position.x = 0.08;
-    const braid = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.5, 8), mat(s.hair));
-    braid.position.set(0.2, 1.75, -0.08);
-    parts.push(gogBand, lensL, lensR, braid);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.155, 0.018, 8, 18), M(0x222222));
+    band.position.set(0, 1.80, 0.02); band.rotation.x = Math.PI / 2;
+    const lens = (x) => {
+      const l = new THREE.Mesh(new THREE.SphereGeometry(0.065, 14, 12), M(0xa8d0f0, { emissive: 0x335566, em: 0.35 }));
+      l.position.set(x, 1.80, 0.18);
+      l.scale.set(1, 1, 0.35);
+      return l;
+    };
+    const braid = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.022, 0.52, 10), hairM);
+    braid.position.set(0.16, 1.55, -0.1);
+    parts.push(band, lens(-0.08), lens(0.08), braid);
   }
   if (s.facepaint || skinId === 'shop_female') {
-    const paint = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.035, 0.03), mat(0x1a1a1a));
-    paint.position.set(0, 1.86, headR * 0.9);
+    const paint = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), M(0x111111));
+    paint.position.set(0, 1.66, 0.22);
+    paint.scale.set(1.6, 0.25, 0.3);
     parts.push(paint);
   }
   if (s.helmet || skinId === 'shop_male') {
-    const helm = new THREE.Mesh(new THREE.SphereGeometry(headR * 1.12, 16, 12), mat(0x3d3428, { roughness: 0.8 }));
-    helm.position.y = 2.0;
-    helm.scale.set(1.05, 0.55, 1.05);
-    const brim = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 8, 16), mat(0x2a2418, { roughness: 0.7 }));
-    brim.position.set(0, 1.98, 0.02);
-    brim.rotation.x = Math.PI / 2;
-    const gogM = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.028, 8, 16), mat(0xb0c0d0, { metalness: 0.55, roughness: 0.3 }));
-    gogM.position.set(0, 1.96, 0.12);
-    gogM.rotation.x = Math.PI / 2;
-    parts.push(helm, brim, gogM);
+    const helm = new THREE.Mesh(new THREE.SphereGeometry(0.30, 16, 12), M(0x3a3228));
+    helm.position.y = 1.82;
+    helm.scale.set(1.08, 0.55, 1.08);
+    const gog = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.026, 8, 16), M(0xb8c8d8, { emissive: 0x222233, em: 0.2 }));
+    gog.position.set(0, 1.78, 0.1); gog.rotation.x = Math.PI / 2;
+    parts.push(helm, gog);
   }
   if (s.scarf || skinId === 'shop_male') {
-    const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.055, 8, 14), mat(0xc4b896, { roughness: 0.7 }));
-    scarf.position.set(0, 1.68, 0.04);
-    scarf.rotation.x = Math.PI / 2;
+    const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.125, 0.048, 8, 14), M(0xc4b896));
+    scarf.position.set(0, 1.50, 0.03); scarf.rotation.x = Math.PI / 2;
     parts.push(scarf);
   }
   if (skinId === 'shop_male') {
-    // tatuaż FORTNEX na ramieniu
-    const tat = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.14, 0.12), mat(0x1a1a1a));
-    tat.position.set(shoulderX + 0.06, 1.4, 0.05);
+    const tat = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), M(0x0a0a0a));
+    tat.position.set(shX + 0.04, 1.22, 0.05);
+    tat.scale.set(0.5, 1.5, 1.0);
     parts.push(tat);
   }
-  if (skinId === 'wiezien_seweryn') {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(bodyW + 0.02, 0.12, bodyD + 0.02), mat(0xffffff));
-    stripe.position.y = 1.28;
-    parts.push(stripe);
-  }
 
-  parts.forEach(m => {
-    m.traverse?.(ch => { if (ch.isMesh) { ch.castShadow = true; ch.receiveShadow = true; } });
-    if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
-    g.add(m);
+  parts.forEach(p => {
+    p.traverse?.(ch => {
+      if (ch.isMesh) { ch.castShadow = true; ch.receiveShadow = true; }
+    });
+    if (p.isMesh) { p.castShadow = true; p.receiveShadow = true; }
+    g.add(p);
   });
 
-  // Postura FN lobby
-  if (female) {
-    armLG.rotation.set(0.15, 0.1, 0.25);
-    armRG.rotation.set(0.15, -0.1, -0.25);
-  } else {
-    armLG.rotation.set(0.2, 0.05, 0.45);
-    armRG.rotation.set(0.2, -0.05, -0.45);
-  }
-
-  g.scale.setScalar(scale);
   g.userData.skinId = skinId;
-  g.userData.gender = female ? 'female' : 'male';
-  g.userData.armL = armLG;
-  g.userData.armR = armRG;
-  g.userData.legL = thighL;
-  g.userData.legR = thighR;
+  g.userData.armL = armL;
+  g.userData.armR = armR;
+  g.userData.legL = legL;
+  g.userData.legR = legR;
+  return g;
+}
+
+function makeWeaponMesh(weaponId) {
+  // Wyraźniejsze itemy 3D (nie sam szary prostopadłościan)
+  const g = new THREE.Group();
+  const M = (c, em) => new THREE.MeshLambertMaterial({ color: c, emissive: em || 0x000000, emissiveIntensity: em ? 0.2 : 0 });
+  if (!weaponId || weaponId === 'pickaxe') {
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.85, 6), M(0x8B5A2B));
+    handle.rotation.z = Math.PI / 2; handle.position.set(0.1, 0, 0);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.35), M(0xb0b0b0));
+    head.position.set(0.45, 0.02, 0);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.28), M(0x8a2a1a));
+    blade.position.set(0.52, 0.02, 0.05);
+    g.add(handle, head, blade);
+    return g;
+  }
+  // domyślna broń palna — lufa + magazynek + kolba
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.55), M(0x2a2a2a));
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.4, 6), M(0x1a1a1a));
+  barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.02, -0.4);
+  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.12), M(0x333333));
+  mag.position.set(0, -0.12, 0.05);
+  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.22), M(0x4a3020));
+  stock.position.set(0, 0, 0.35);
+  g.add(body, barrel, mag, stock);
+  if (weaponId === 'sniper') {
+    const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.15, 8), M(0x222222));
+    scope.rotation.x = Math.PI / 2; scope.position.set(0, 0.12, -0.05);
+    g.add(scope);
+  }
   return g;
 }
 
@@ -1570,12 +1677,11 @@ function startGame() {
   }
   playerMesh.visible = true;
   scene.add(playerMesh);
-  // broń przy ręce
-  weaponMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(0.12, 0.12, 0.7),
-    new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.6, roughness: 0.35 })
-  );
-  weaponMesh.position.set(0.45, 1.35, -0.35);
+  // broń przy ręce — model kilofa / broni, nie szary klocek
+  if (weaponMesh && playerMesh) try { playerMesh.remove(weaponMesh); } catch(e) {}
+  weaponMesh = makeWeaponMesh(player.weapon || 'pickaxe');
+  weaponMesh.position.set(0.42, 1.25, -0.25);
+  weaponMesh.rotation.set(0.2, 0.4, 0.15);
   playerMesh.add(weaponMesh);
 
 
@@ -1897,10 +2003,12 @@ function equipWeapon(id) {
   player.weapon = id;
   player.ammo = w.mag;
   player.reserve = w.reserve;
-  if (weaponMesh && w) {
-    const cols = { legendary: 0xffcc00, epic: 0xb026ff, rare: 0x4da6ff, default: 0x888888 };
-    weaponMesh.material.color.setHex(cols[w.rarity] || 0x333333);
-    weaponMesh.scale.set(1, 1, w.melee ? 0.7 : 1.2);
+  if (playerMesh && w) {
+    try { if (weaponMesh) playerMesh.remove(weaponMesh); } catch (e) {}
+    weaponMesh = makeWeaponMesh(id);
+    weaponMesh.position.set(0.42, 1.25, -0.25);
+    weaponMesh.rotation.set(0.2, 0.4, 0.15);
+    playerMesh.add(weaponMesh);
   }
   updateHUD();
 }
